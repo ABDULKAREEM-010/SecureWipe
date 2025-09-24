@@ -29,7 +29,3 @@ args = "python main.py"
 
 [workflows.workflow.metadata]
 outputType = "vnc"
-
-[[ports]]
-localPort = 38303
-externalPort = 80
