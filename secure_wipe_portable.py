@@ -242,12 +242,15 @@ class PortableSecureWipeApp:
             self.file_tree.delete(item)
             
         def load_files_thread():
+            def update_ui(func):
+                """Thread-safe UI update wrapper"""
+                self.root.after(0, func)
             try:
-                self.status_label.config(text="Scanning directory...")
+                update_ui(lambda: self.status_label.config(text="Scanning directory..."))
                 files = self.file_manager.list_files(directory, recursive=False)
                 
                 total_files = len(files)
-                self.status_label.config(text=f"Found {total_files} files/directories")
+                update_ui(lambda: self.status_label.config(text=f"Found {total_files} files/directories"))
                 
                 for i, file_info in enumerate(files):
                     file_path = file_info['path']
@@ -265,11 +268,13 @@ class PortableSecureWipeApp:
                     else:
                         icon = "📋"
                     
-                    # Insert into tree with path in values
+                    # Insert into tree with path in values (thread-safe)
                     display_name = f"{icon} {os.path.basename(file_path)}"
-                    item_id = self.file_tree.insert('', 'end', 
-                                                  text=display_name,
-                                                  values=(file_path, size_str, "", file_type))
+                    def insert_item():
+                        return self.file_tree.insert('', 'end', 
+                                                    text=display_name,
+                                                    values=(file_path, size_str, "", file_type))
+                    update_ui(insert_item)
                     
                     # Update progress (thread-safe)
                     if i % 10 == 0:  # Update every 10 files to avoid UI freeze
@@ -280,8 +285,8 @@ class PortableSecureWipeApp:
                 update_ui(lambda: self.status_label.config(text=f"Loaded {total_files} items from your computer"))
                 
             except Exception as e:
-                messagebox.showerror("Error", f"Failed to load directory: {str(e)}")
-                self.status_label.config(text="Failed to load directory")
+                update_ui(lambda: messagebox.showerror("Error", f"Failed to load directory: {str(e)}"))
+                update_ui(lambda: self.status_label.config(text="Failed to load directory"))
                 
         # Run in separate thread to avoid UI freeze
         threading.Thread(target=load_files_thread, daemon=True).start()
@@ -447,6 +452,9 @@ class PortableSecureWipeApp:
             return
             
         def wipe_thread():
+            def update_ui(func):
+                """Thread-safe UI update wrapper"""
+                self.root.after(0, func)
             try:
                 update_ui(lambda: self.status_label.config(text="Starting secure wipe on your files..."))
                 update_ui(lambda: self.progress_var.set(0))
@@ -486,18 +494,18 @@ class PortableSecureWipeApp:
                 update_ui(lambda: self.status_label.config(text="Secure wipe completed successfully"))
                 update_ui(lambda: self.progress_var.set(100))
                 
-                messagebox.showinfo("Success", 
-                                  f"Secure wipe completed!\n"
-                                  f"Files processed: {len(result.get('files_processed', []))}\n"
-                                  f"Files failed: {len(result.get('files_failed', []))}"
-                                  f"{cert_info}")
+                update_ui(lambda: messagebox.showinfo("Success", 
+                                            f"Secure wipe completed!\n"
+                                            f"Files processed: {len(result.get('files_processed', []))}\n"
+                                            f"Files failed: {len(result.get('files_failed', []))}"
+                                            f"{cert_info}"))
                 
                 # Refresh file list
                 if self.current_directory and os.path.exists(self.current_directory):
                     self.load_directory_files(self.current_directory)
                     
             except Exception as e:
-                messagebox.showerror("Error", f"Wipe failed: {str(e)}")
+                update_ui(lambda: messagebox.showerror("Error", f"Wipe failed: {str(e)}"))
                 update_ui(lambda: self.status_label.config(text="Wipe failed"))
                 
         # Run wipe in separate thread
