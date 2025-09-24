@@ -3,8 +3,10 @@ certificates/
 *.pem
 *.key
 audit_logs.db
+*.db
 logs/
 secrets/
+.secure_wipe/
 
 # Python
 __pycache__/
