@@ -9,7 +9,7 @@ import hashlib
 import qrcode
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, List
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.exceptions import InvalidSignature
@@ -31,43 +31,53 @@ class CertificateGenerator:
         
     def _get_or_create_keys(self):
         """Generate or load RSA key pair for signing certificates"""
-        private_key_path = self.cert_dir / "private_key.pem"
-        public_key_path = self.cert_dir / "public_key.pem"
+        # Use environment-specific secure storage path
+        secure_dir = Path.home() / ".secure_wipe"
+        secure_dir.mkdir(mode=0o700, exist_ok=True)
+        
+        private_key_path = secure_dir / "signing_key.pem"
+        public_key_path = secure_dir / "public_key.pem"
         
         if private_key_path.exists() and public_key_path.exists():
-            # Load existing keys
-            with open(private_key_path, 'rb') as f:
-                private_key = serialization.load_pem_private_key(
-                    f.read(), password=None
-                )
-            
-            with open(public_key_path, 'rb') as f:
-                public_key = serialization.load_pem_public_key(f.read())
+            try:
+                # Load existing keys
+                with open(private_key_path, 'rb') as f:
+                    private_key = serialization.load_pem_private_key(
+                        f.read(), password=None
+                    )
                 
-            return private_key, public_key
-        else:
-            # Generate new keys
-            private_key = rsa.generate_private_key(
-                public_exponent=65537,
-                key_size=2048
-            )
-            public_key = private_key.public_key()
-            
-            # Save keys
-            with open(private_key_path, 'wb') as f:
-                f.write(private_key.private_bytes(
-                    encoding=serialization.Encoding.PEM,
-                    format=serialization.PrivateFormat.PKCS8,
-                    encryption_algorithm=serialization.NoEncryption()
-                ))
-            
-            with open(public_key_path, 'wb') as f:
-                f.write(public_key.public_bytes(
-                    encoding=serialization.Encoding.PEM,
-                    format=serialization.PublicFormat.SubjectPublicKeyInfo
-                ))
-            
-            return private_key, public_key
+                with open(public_key_path, 'rb') as f:
+                    public_key = serialization.load_pem_public_key(f.read())
+                    
+                return private_key, public_key
+            except Exception:
+                # If keys are corrupted, regenerate
+                pass
+        
+        # Generate new keys with higher security
+        private_key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=4096  # Increased key size for better security
+        )
+        public_key = private_key.public_key()
+        
+        # Save keys with secure permissions
+        with open(private_key_path, 'wb') as f:
+            f.write(private_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption()
+            ))
+        os.chmod(private_key_path, 0o600)  # Owner read/write only
+        
+        with open(public_key_path, 'wb') as f:
+            f.write(public_key.public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo
+            ))
+        os.chmod(public_key_path, 0o644)  # Owner read/write, others read
+        
+        return private_key, public_key
     
     def generate_certificate(self, wipe_results: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -249,9 +259,9 @@ class CertificateGenerator:
     
     def _generate_qr_code(self, qr_data: str, cert_id: str) -> Path:
         """Generate QR code image"""
-        qr = qrcode.QRCode(
+        qr = qrcode.main.QRCode(
             version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            error_correction=qrcode.ERROR_CORRECT_L,
             box_size=10,
             border=4,
         )
@@ -354,5 +364,5 @@ class CertificateGenerator:
         for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
             if bytes_value < 1024.0:
                 return f"{bytes_value:.1f} {unit}"
-            bytes_value /= 1024.0
+            bytes_value = int(bytes_value / 1024.0)
         return f"{bytes_value:.1f} PB"

@@ -16,7 +16,22 @@ from openai import OpenAI
 
 class SensitiveDataDetector:
     def __init__(self):
-        self.openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        # Initialize OpenAI client with error handling
+        api_key = os.environ.get("OPENAI_API_KEY")
+        self.openai_available = bool(api_key)
+        
+        if self.openai_available:
+            try:
+                self.openai_client = OpenAI(api_key=api_key)
+                # Test connection with a minimal request
+                self._test_openai_connection()
+            except Exception as e:
+                print(f"OpenAI initialization failed: {e}")
+                self.openai_available = False
+                self.openai_client = None
+        else:
+            self.openai_client = None
+            print("Warning: No OpenAI API key found. Using regex-only detection.")
         
         # Regex patterns for quick pre-filtering
         self.patterns = {
@@ -33,6 +48,20 @@ class SensitiveDataDetector:
         
         # File size limit for AI analysis (1MB)
         self.max_file_size = 1024 * 1024
+    
+    def _test_openai_connection(self):
+        """Test OpenAI connection with a minimal request"""
+        try:
+            response = self.openai_client.chat.completions.create(
+                model="gpt-3.5-turbo",  # Use more reliable model for testing
+                messages=[{"role": "user", "content": "test"}],
+                max_tokens=1
+            )
+            return True
+        except Exception as e:
+            print(f"OpenAI connection test failed: {e}")
+            self.openai_available = False
+            return False
         
     def analyze_file(self, file_path: str) -> float:
         """
@@ -66,10 +95,14 @@ class SensitiveDataDetector:
             # Pre-filter with regex
             regex_risk = self._regex_analysis(content)
             
-            # If regex found potential sensitive data, use AI for confirmation
-            if regex_risk > 0.3 or filename_risk > 0.5:
+            # If regex found potential sensitive data, use AI for confirmation (if available)
+            if (regex_risk > 0.3 or filename_risk > 0.5) and self.openai_available:
                 ai_risk = self._ai_analysis(content, path.name)
                 return max(regex_risk, ai_risk, filename_risk)
+            
+            # Boost regex risk if AI is not available and patterns found
+            if not self.openai_available and regex_risk > 0.3:
+                regex_risk = min(regex_risk * 1.2, 1.0)  # Slight boost for conservative detection
             
             return max(regex_risk, filename_risk)
             
@@ -177,6 +210,9 @@ class SensitiveDataDetector:
             Risk score from AI analysis
         """
         try:
+            if not self.openai_available:
+                return 0.0
+                
             # Truncate content if too long
             if len(content) > 8000:
                 content = content[:8000] + "... [truncated]"
@@ -209,7 +245,7 @@ Respond with a JSON object containing:
 Be conservative in assessment. False positives are better than false negatives for data security."""
 
             response = self.openai_client.chat.completions.create(
-                model="gpt-5",
+                model="gpt-3.5-turbo",  # Use more available model
                 messages=[
                     {"role": "system", "content": "You are a cybersecurity expert specializing in sensitive data identification. Analyze content carefully and provide accurate risk assessments."},
                     {"role": "user", "content": prompt}
@@ -217,7 +253,8 @@ Be conservative in assessment. False positives are better than false negatives f
                 response_format={"type": "json_object"}
             )
             
-            result = json.loads(response.choices[0].message.content)
+            content = response.choices[0].message.content or "{}"
+            result = json.loads(content)
             risk_score = float(result.get('risk_score', 0.0))
             confidence = float(result.get('confidence', 0.5))
             

@@ -42,7 +42,7 @@ class SecureWipeApp:
         """Setup the main user interface"""
         # Main container
         main_frame = ttk.Frame(self.root, padding="10")
-        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        main_frame.grid(row=0, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
         
         # Configure grid weights
         self.root.columnconfigure(0, weight=1)
@@ -57,40 +57,40 @@ class SecureWipeApp:
         
         # Left panel - Controls
         controls_frame = ttk.LabelFrame(main_frame, text="Wipe Configuration", padding="10")
-        controls_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 10))
+        controls_frame.grid(row=1, column=0, sticky=tk.W+tk.E+tk.N+tk.S, padx=(0, 10))
         
         # Browse directory button
         ttk.Button(controls_frame, text="Browse Directory", 
-                  command=self.browse_directory).grid(row=0, column=0, sticky=(tk.W, tk.E), pady=5)
+                  command=self.browse_directory).grid(row=0, column=0, sticky=tk.W+tk.E, pady=5)
         
         # Wipe options
         ttk.Label(controls_frame, text="Wipe Passes:").grid(row=1, column=0, sticky=tk.W, pady=5)
         self.passes_var = tk.StringVar(value="3")
         passes_spinbox = ttk.Spinbox(controls_frame, from_=1, to=35, textvariable=self.passes_var, width=10)
-        passes_spinbox.grid(row=2, column=0, sticky=(tk.W, tk.E), pady=5)
+        passes_spinbox.grid(row=2, column=0, sticky=tk.W+tk.E, pady=5)
         
         ttk.Label(controls_frame, text="Fill Pattern:").grid(row=3, column=0, sticky=tk.W, pady=5)
         self.pattern_var = tk.StringVar(value="random")
         pattern_combo = ttk.Combobox(controls_frame, textvariable=self.pattern_var, 
                                    values=["zero", "random", "dod"], state="readonly")
-        pattern_combo.grid(row=4, column=0, sticky=(tk.W, tk.E), pady=5)
+        pattern_combo.grid(row=4, column=0, sticky=tk.W+tk.E, pady=5)
         
         ttk.Label(controls_frame, text="Wipe Method:").grid(row=5, column=0, sticky=tk.W, pady=5)
         self.method_var = tk.StringVar(value="selected")
         method_combo = ttk.Combobox(controls_frame, textvariable=self.method_var,
                                   values=["selected", "full_device"], state="readonly")
-        method_combo.grid(row=6, column=0, sticky=(tk.W, tk.E), pady=5)
+        method_combo.grid(row=6, column=0, sticky=tk.W+tk.E, pady=5)
         
         # Action buttons
         ttk.Button(controls_frame, text="Scan for Sensitive Data", 
-                  command=self.scan_sensitive_data).grid(row=7, column=0, sticky=(tk.W, tk.E), pady=10)
+                  command=self.scan_sensitive_data).grid(row=7, column=0, sticky=tk.W+tk.E, pady=10)
         
         ttk.Button(controls_frame, text="Start Secure Wipe", 
-                  command=self.start_wipe, style='Accent.TButton').grid(row=8, column=0, sticky=(tk.W, tk.E), pady=5)
+                  command=self.start_wipe).grid(row=8, column=0, sticky=tk.W+tk.E, pady=5)
         
         # Right panel - File browser
         browser_frame = ttk.LabelFrame(main_frame, text="File Browser", padding="10")
-        browser_frame.grid(row=1, column=1, rowspan=2, sticky=(tk.W, tk.E, tk.N, tk.S))
+        browser_frame.grid(row=1, column=1, rowspan=2, sticky=tk.W+tk.E+tk.N+tk.S)
         browser_frame.columnconfigure(0, weight=1)
         browser_frame.rowconfigure(0, weight=1)
         
@@ -111,17 +111,17 @@ class SecureWipeApp:
         tree_scroll = ttk.Scrollbar(browser_frame, orient="vertical", command=self.file_tree.yview)
         self.file_tree.configure(yscrollcommand=tree_scroll.set)
         
-        self.file_tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        tree_scroll.grid(row=0, column=1, sticky=(tk.N, tk.S))
+        self.file_tree.grid(row=0, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
+        tree_scroll.grid(row=0, column=1, sticky=tk.N+tk.S)
         
         # Bottom panel - Progress and logs
         progress_frame = ttk.LabelFrame(main_frame, text="Operation Progress", padding="10")
-        progress_frame.grid(row=2, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(10, 0))
+        progress_frame.grid(row=2, column=0, sticky=tk.W+tk.E+tk.N+tk.S, pady=(10, 0))
         progress_frame.columnconfigure(0, weight=1)
         
         self.progress_var = tk.DoubleVar()
         self.progress_bar = ttk.Progressbar(progress_frame, variable=self.progress_var, maximum=100)
-        self.progress_bar.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=5)
+        self.progress_bar.grid(row=0, column=0, sticky=tk.W+tk.E, pady=5)
         
         self.status_label = ttk.Label(progress_frame, text="Ready")
         self.status_label.grid(row=1, column=0, sticky=tk.W, pady=5)
@@ -207,11 +207,11 @@ class SecureWipeApp:
                     
                     # Color code based on risk
                     if risk_score > 0.7:
-                        self.file_tree.set(item_id, tags=('high_risk',))
+                        self.file_tree.item(item_id, tags=('high_risk',))
                     elif risk_score > 0.4:
-                        self.file_tree.set(item_id, tags=('medium_risk',))
+                        self.file_tree.item(item_id, tags=('medium_risk',))
                     else:
-                        self.file_tree.set(item_id, tags=('low_risk',))
+                        self.file_tree.item(item_id, tags=('low_risk',))
                     
                     processed += 1
                     progress = (processed / total_items) * 100
