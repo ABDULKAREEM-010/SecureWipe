@@ -1,0 +1,143 @@
+Project: Secure E-Waste Data Wiping Platform
+
+Goal: Build a cross-platform (Windows/Linux/Android) data wiping application that securely erases device data, supports AI-sensitive file detection, provides user/admin file-level control, and allows super-admin full-device management, with auditable certificates.
+
+Features to Implement:
+
+1. Roles & Access
+
+
+
+User/Admin (merged role)
+
+Can list all files on the device.
+
+AI + regex engine highlights sensitive files.
+
+Can choose selective file wipe (for demo/wow factor).
+
+Can perform full-device wipe (primary PS requirement).
+
+Configure wipe options:
+
+Number of passes
+
+Filling pattern: zero-fill, random-fill, DoD standard
+
+Wipe method: full device / selected files
+
+Gets tamper-proof certificate (PDF + JSON) with QR code for verification.
+
+Offline/bootable ISO support for full-device wipes.
+
+Super Admin
+
+Can see all registered devices in the office/org.
+
+Can remotely wipe entire devices only (no file-level selection).
+
+Reviews audit logs, wipe certificates, and policy compliance.
+
+Cannot view individual file contents to maintain privacy.
+
+2. AI-Sensitive File Detection
+
+
+
+Hybrid approach:
+
+Regex & heuristic pre-filter: detect Aadhaar, PAN, Passport, bank statements, emails, phone numbers.
+
+AI/NER classifier: validates context of pre-filtered files for false positives.
+
+OCR for images/PDFs: extract text → AI classifies sensitive content.
+
+Displays risk score per file in user/admin dashboard.
+
+3. Wipe Engine
+
+
+
+File-level and full-device overwriting.
+
+Supports configurable passes and fill patterns.
+
+Chunked writes for large files; fsync for reliability.
+
+SSD: crypto-erase/ATA secure erase (if possible).
+
+Handles hidden areas: HPA/DCO, swap partitions.
+
+4. Certificates & Audit
+
+
+
+Generates JSON + PDF certificate for each wipe.
+
+Digitally signed (agent + server) → tamper-proof.
+
+QR code linking to verification endpoint.
+
+Optional Merkle/log anchoring for blockchain audit.
+
+5. Bootable ISO
+
+
+
+Full-device wipe can be executed from a bootable USB/ISO without OS interference.
+
+Includes agent + wipe script baked in.
+
+6. User/Admin Dashboard
+
+
+
+File list + AI risk flags.
+
+Wipe options: selective files or full device.
+
+Preview certificate + QR verification.
+
+Confirmation dialogs to prevent accidental deletion.
+
+7. Super Admin Dashboard
+
+
+
+List all registered devices.
+
+Remote full-device wipe only.
+
+View logs and verify certificates.
+
+Enforce policies (passes, patterns, wipe method).
+
+8. Optional Wow Factors
+
+
+
+Gamification badges for users completing safe wipe.
+
+AI detects sensitive content even in scanned images.
+
+Multi-language support.
+
+Offline usability + cloud sync for audit logs.
+
+9. Technical Notes
+
+
+
+Agent: Python or Go, packaged with PyInstaller or Go static binary.
+
+Backend: FastAPI or Node.js; REST + WebSocket for remote commands.
+
+Frontend: React + Electron (desktop) or web dashboard.
+
+DB: Postgres; Redis for command queues.
+
+Certificates: SHA256 + RSA/ECDSA signing.
+
+AI: SpaCy / HuggingFace NER + Tesseract OCR.
+
+can u help me build it
