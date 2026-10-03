@@ -85,7 +85,8 @@ class WipeEngine:
                     results['files_processed'].append(file_result)
                     
                     processed_size += file_size * passes
-                    self.progress_callback(min(100.0, (processed_size / total_size) * 100))
+                    progress = 100.0 if total_size == 0 else (processed_size / total_size) * 100
+                    self.progress_callback(min(100.0, progress))
                     
                 except Exception as e:
                     results['files_failed'].append({
@@ -234,7 +235,8 @@ class WipeEngine:
             
             # Clear file attributes
             try:
-                os.chmod(file_path, 0o000)
+                # Windows blocks rename/delete for files made mode 000.
+                os.chmod(file_path, 0o600 if os.name == 'nt' else 0o000)
                 result['security_measures'].append("File attributes cleared")
             except Exception:
                 pass
